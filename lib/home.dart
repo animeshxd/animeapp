@@ -72,7 +72,7 @@ class _HomeState extends State<Home> {
 
       return;
     } on HttpException {
-      showsnack("Error: Unexpected Connection Error!");
+      showsnack("Error: Unexpected Connection Error!", label: "Exit App", );
       return;
     } on FormatException {
       showsnack("Error: Unexpected ServerSide Error!");

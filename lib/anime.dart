@@ -215,14 +215,14 @@ class _AnimeFullState extends State<AnimeFull> {
             ),
             const Divider(
               height: 1,
-              color: Colors.grey,
+              // color: Colors.grey,
             ),
             ListTile(
               style: ListTileStyle.drawer,
               leading: const Text(
                 "DESCRIPTION",
                 style: TextStyle(
-                    color: Colors.grey,
+                    // color: Colors.grey,
                     letterSpacing: 1,
                     fontSize: 14,
                     fontWeight: FontWeight.bold),
@@ -250,7 +250,7 @@ class _AnimeFullState extends State<AnimeFull> {
             ),
             const Divider(
               height: 1,
-              color: Colors.grey,
+              // color: Colors.grey,
             ),
             ListTile(
               title: Text(
@@ -310,7 +310,7 @@ class _AnimeFullState extends State<AnimeFull> {
             ),
             const Divider(
               height: 0.1,
-              color: Colors.grey,
+              // color: Colors.grey,
             ),
             const SizedBox(
               height: 10,

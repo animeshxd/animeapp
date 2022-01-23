@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'loading.dart';
 import 'home.dart';
-import 'anime.dart';
+import '_newanime.dart';
 import 'output.dart';
 
 void main() {
@@ -19,7 +19,16 @@ class App extends StatelessWidget {
         primaryColor: Colors.grey,
         primarySwatch: Colors.grey,
         backgroundColor: Colors.black,
-        brightness: Brightness.dark
+        scaffoldBackgroundColor: const Color(0x561F1C1C),
+        // appBarTheme: const AppBarTheme(backgroundColor: Colors.black54),
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(backgroundColor: Colors.black),
+        highlightColor: Colors.black54,
+        canvasColor: Colors.grey[900],
+        cardColor: const Color(0x561F1C1C),
+        dividerColor: Colors.grey,
+        brightness: Brightness.dark,
+      
+
       ),
       theme: ThemeData.dark(),
       initialRoute: '/',

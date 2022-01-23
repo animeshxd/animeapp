@@ -23,6 +23,7 @@ class _OutputAnimeState extends State<OutputAnime> {
   String _currentUrl = "";
   String _currentRef = '';
   final sinkStream = SinkStream();
+  final _broadcast = SinkStreamBroadCast();
   @override
   void initState() {
     super.initState();
@@ -45,7 +46,7 @@ class _OutputAnimeState extends State<OutputAnime> {
     await _player.setDataSource(url, autoPlay: true).catchError((error) {});
   }
 
-  Future<Widget> getSources(String data, String title) async {
+  Future<Widget> getSources(String data) async {
     try {
       Uri url = Uri.http(baseServer, '/stream' + data);
       http.Response res = await http.get(url);
@@ -73,15 +74,22 @@ class _OutputAnimeState extends State<OutputAnime> {
         }
       }
       if (_currentUrl.isNotEmpty) initVideo(_currentUrl, _currentRef);
-      sinkStream.sink.add(
-          _data['iframe'].toString().replaceAll("streaming.php", "download"));
+      var sinkdata = {
+        "download":
+            _data['iframe'].toString().replaceAll("streaming.php", "download"),
+        "name": _data['name'],
+        "next": _data['next'],
+        "previous": _data['previous'],
+      };
+      _broadcast.sink.add(sinkdata);
+
       return FijkView(
         player: _player,
         color: Colors.black,
         // fs: false,
         panelBuilder: (player, data, context, viewSize, texturePos) {
           return CustomFijkPanel(
-            title: title,
+              title: _data['name'].toString(),
               player: player,
               buildContext: context,
               viewSize: viewSize,
@@ -191,11 +199,55 @@ class _OutputAnimeState extends State<OutputAnime> {
 
   @override
   Widget build(BuildContext context) {
-    List _todata = ModalRoute.of(context)?.settings.arguments as List;
+    String _todata = ModalRoute.of(context)?.settings.arguments as String;
     return Scaffold(
         appBar: AppBar(
           // title: Text(_todata[1]),
           actions: [
+            // previous
+            StreamBuilder<Map>(
+                stream: _broadcast.stream,
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    if (snapshot.data!['previous'] != null) {
+                      return IconButton(
+                          tooltip: "Previous Episode",
+                          onPressed: () {
+                            Navigator.of(context).popAndPushNamed(
+                              '/output',
+                              arguments: snapshot.data!['previous'],
+                            );
+                          },
+                          icon: const Icon(Icons.navigate_before));
+                    } else {
+                      return Container();
+                    }
+                  } else {
+                    return Container();
+                  }
+                }),
+            // next
+            StreamBuilder<Map>(
+                stream: _broadcast.stream,
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    if (snapshot.data!['next'] != null) {
+                      return IconButton(
+                          tooltip: "Next Episode",
+                          onPressed: () {
+                            Navigator.of(context).popAndPushNamed(
+                              '/output',
+                              arguments: snapshot.data!['next'],
+                            );
+                          },
+                          icon: const Icon(Icons.navigate_next));
+                    } else {
+                      return Container();
+                    }
+                  } else {
+                    return Container();
+                  }
+                }),
             IconButton(
                 onPressed: () {
                   if (_player.value.fullScreen) {
@@ -207,18 +259,30 @@ class _OutputAnimeState extends State<OutputAnime> {
                 icon: _player.value.fullScreen
                     ? const Icon(Icons.fullscreen)
                     : const Icon(Icons.fullscreen_exit)),
-            StreamBuilder(
-              stream: sinkStream.stream,
+
+            //download
+            StreamBuilder<Map>(
+              stream: _broadcast.stream,
               builder: (context, snapshot) {
-                return IconButton(
-                    onPressed: () async {
-                      if (snapshot.hasData) {
-                        if (await canLaunch(snapshot.data as String)) {
-                          await launch(snapshot.data as String);
-                        }
-                      }
-                    },
-                    icon: const Icon(Icons.download));
+                if (snapshot.hasData) {
+                  if (snapshot.data!['download'] != null) {
+                    return IconButton(
+                        onPressed: () async {
+                          if (snapshot.hasData) {
+                            if (await canLaunch(
+                                snapshot.data!['download'] as String)) {
+                              await launch(
+                                  snapshot.data!['download'] as String);
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.download));
+                  } else {
+                    return Container();
+                  }
+                } else {
+                  return Container();
+                }
               },
             ),
             PopupMenuButton(
@@ -231,7 +295,7 @@ class _OutputAnimeState extends State<OutputAnime> {
           ],
         ),
         body: FutureBuilder(
-          future: getSources(_todata[0], _todata[1]),
+          future: getSources(_todata),
           builder: (context, snapshot) {
             if (snapshot.hasData) {
               return snapshot.data as Widget;
@@ -265,7 +329,13 @@ class Quality {
 class QualityItems {}
 
 class SinkStream {
-  final _streamcontrolller = StreamController<String>();
+  final _streamcontrolller = StreamController<String>.broadcast();
   StreamSink<String> get sink => _streamcontrolller.sink;
   Stream<String> get stream => _streamcontrolller.stream;
+}
+
+class SinkStreamBroadCast {
+  final _streamcontrolller = StreamController<Map>.broadcast();
+  StreamSink<Map> get sink => _streamcontrolller.sink;
+  Stream<Map> get stream => _streamcontrolller.stream;
 }

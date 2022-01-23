@@ -94,6 +94,9 @@ class _CustomFijkPanelState extends State<CustomFijkPanel> {
           } else {
             await player.pause();
           }
+          setState(() {
+            
+          });
         },
         onPanUpdate: (details) async {
           // Swiping in right direction.
@@ -132,10 +135,13 @@ class _CustomFijkPanelState extends State<CustomFijkPanel> {
                     if(player.currentPos.inMilliseconds - 10000 > 0) {
                       await player.seekTo(player.currentPos.inMilliseconds - 10000);
                     }
+                    setState(() {
+                      
+                    });
                   },
-                  child: SizedBox(
+                  child: Container(
                     width: MediaQuery.of(context).size.width / 3.1,
-                    // color: Colors.green,
+                    color: Colors.transparent,
                     height: MediaQuery.of(context).size.height * 0.50,
                   ),
                 ),
@@ -146,20 +152,26 @@ class _CustomFijkPanelState extends State<CustomFijkPanel> {
                     } else {
                       await player.pause();
                     }
+                    setState(() {
+                      
+                    });
                   },
-                  child: SizedBox(
+                  child: Container(
                     width: MediaQuery.of(context).size.width / 3.1,
-                    // color: Colors.blue,
+                    color: Colors.transparent,
                     height: MediaQuery.of(context).size.height * 0.60,
                   ),
                 ),
                 GestureDetector(
                   onDoubleTap: () async {
                      await player.seekTo(player.currentPos.inMilliseconds + 10000);
+                    setState(() {
+                      
+                    });
                   },
-                  child: SizedBox(
+                  child: Container(
                     width: MediaQuery.of(context).size.width / 3.1,
-                    // color: Colors.red,
+                    color: Colors.transparent,
                     height: MediaQuery.of(context).size.height * 0.50,
                   ),
                 ),

@@ -100,6 +100,7 @@ class SearchAnime extends SearchDelegate<String> {
           subtitle: Text("Total: ${anime[index].total}"),
           title: Text(anime[index].name),
           onTap: () {
+            Navigator.popUntil(context, ModalRoute.withName('/home'));
             Navigator.of(context)
                 .pushNamed('/anime', arguments: anime[index].href);
           },
