@@ -24,8 +24,10 @@ class _OutputAnimeState extends State<OutputAnime> {
   String _currentRef = '';
   final sinkStream = SinkStream();
   final _broadcast = SinkStreamBroadCast();
+
   @override
   void initState() {
+    FijkLog.setLevel(FijkLogLevel.Error);
     super.initState();
     Wakelock.enable();
     // _getdemo('');
@@ -33,12 +35,12 @@ class _OutputAnimeState extends State<OutputAnime> {
   }
 
   Future<void> initVideo(String url, String referer) async {
-    FijkLog.setLevel(FijkLogLevel.Error);
+    
     if (_player.value.state != FijkState.end) {
       await _player.reset();
     }
 
-    _player.enterFullScreen();
+    // _player.enterFullScreen();
     await _player.setOption(
         FijkOption.formatCategory, "headers", "Referer: $referer");
     await _player.setOption(FijkOption.playerCategory, 'start-on-prepared', 1);
@@ -256,7 +258,7 @@ class _OutputAnimeState extends State<OutputAnime> {
                     _player.enterFullScreen();
                   }
                 },
-                icon: _player.value.fullScreen
+                icon: !_player.value.fullScreen
                     ? const Icon(Icons.fullscreen)
                     : const Icon(Icons.fullscreen_exit)),
 
