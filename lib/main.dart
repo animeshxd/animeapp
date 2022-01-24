@@ -17,7 +17,7 @@ class App extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       
       theme: ThemeData(
-        primarySwatch: Colors.amber,
+        primarySwatch: Colors.grey,
         primaryColor: Colors.grey,
         backgroundColor: Colors.black,
         scaffoldBackgroundColor: const Color(0x561F1C1C),
