@@ -15,22 +15,21 @@ class App extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      darkTheme: ThemeData(
+      
+      theme: ThemeData(
+        primarySwatch: Colors.amber,
         primaryColor: Colors.grey,
-        primarySwatch: Colors.grey,
         backgroundColor: Colors.black,
         scaffoldBackgroundColor: const Color(0x561F1C1C),
-        // appBarTheme: const AppBarTheme(backgroundColor: Colors.black54),
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(backgroundColor: Colors.black),
+        appBarTheme: const AppBarTheme(backgroundColor: Colors.black54),
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(backgroundColor: Colors.black, selectedItemColor: Colors.white),
         highlightColor: Colors.black54,
         canvasColor: Colors.grey[900],
         cardColor: const Color(0x561F1C1C),
         dividerColor: Colors.grey,
+        textSelectionTheme: const TextSelectionThemeData(cursorColor: Colors.grey, selectionColor: Colors.grey, selectionHandleColor: Colors.grey),
         brightness: Brightness.dark,
-      
-
       ),
-      theme: ThemeData.dark(),
       initialRoute: '/',
       routes: {
         '/': (context) => const Loading(),
