@@ -162,6 +162,35 @@ class _AnimeEpisodeState extends State<AnimeEpisode> {
                                                             content: Text(
                                                               "Successfully Removed ${anime.name}",
                                                             ),
+                                                            action:
+                                                                SnackBarAction(
+                                                              label: "UNDO",
+                                                              onPressed:
+                                                                  () async {
+                                                                DataBaseHelper
+                                                                    .instance
+                                                                    .add(
+                                                                  anime,
+                                                                )
+                                                                    .then(
+                                                                  (value) {
+                                                                    setState(
+                                                                      () {
+                                                                        snapshot
+                                                                            .data
+                                                                            ?.insert(
+                                                                          index,
+                                                                          anime,
+                                                                        );
+                                                                      },
+                                                                    );
+                                                                  },
+                                                                );
+                                                              },
+                                                            ),
+                                                            dismissDirection:
+                                                                DismissDirection
+                                                                    .horizontal,
                                                           ),
                                                         );
                                                       },
