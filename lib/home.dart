@@ -167,16 +167,18 @@ class _HomeState extends State<Home> {
   void initState() {
     super.initState();
     _getanime();
-    _controller.addListener(() {
-      double maxscroll = _controller.position.maxScrollExtent;
-      double currentPixel = _controller.position.pixels;
-      // double delta = MediaQuery.of(context).size.height * 0.25;
-      if (maxscroll == currentPixel) {
-        // current_page += 1;
-        logger.d("adding...");
-        _getanime();
-      }
-    });
+    _controller.addListener(
+      () {
+        double maxscroll = _controller.position.maxScrollExtent;
+        double currentPixel = _controller.position.pixels;
+        // double delta = MediaQuery.of(context).size.height * 0.25;
+        if (maxscroll == currentPixel) {
+          // current_page += 1;
+          logger.d("adding...");
+          _getanime();
+        }
+      },
+    );
   }
 
   @override
@@ -191,10 +193,11 @@ class _HomeState extends State<Home> {
       appBar: AppBar(
         actions: [
           IconButton(
-              onPressed: () {
-                showSearch(context: context, delegate: SearchAnime());
-              },
-              icon: const Icon(Icons.search))
+            onPressed: () {
+              showSearch(context: context, delegate: SearchAnime());
+            },
+            icon: const Icon(Icons.search),
+          )
         ],
       ),
       body: StreamBuilder(
