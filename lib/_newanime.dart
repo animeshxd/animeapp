@@ -4,7 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'database/database.dart' show Anime, DataBaseHelper;
+import 'database/anime.dart' show Anime, DataBaseHelper;
 import 'config.dart';
 import 'search.dart';
 
