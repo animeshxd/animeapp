@@ -154,10 +154,12 @@ class _HomeState extends State<Home> {
       };
       action = SnackBarAction(label: label, onPressed: func);
     }
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message.toString()),
-      action: action,
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message.toString()),
+        action: action,
+      ),
+    );
     _errorLock = false;
   }
 
@@ -241,8 +243,6 @@ class _HomeState extends State<Home> {
     );
   }
 }
-
-
 
 class SinkStream {
   final _streamcontrolller = StreamController<bool>();
