@@ -85,7 +85,8 @@ class _AnimeEpisodeState extends State<AnimeEpisode> {
             if (anime.data.isNotEmpty) {
               _streamSinkList.sink.add(anime.data.first);
               _streamSinkString.sink.add(
-                  "${anime.data.first.first['number']} - ${anime.data.first.last['number']}");
+                "${anime.data.first.first['number']} - ${anime.data.first.last['number']}",
+              );
             }
 
             return CustomScrollView(
@@ -147,21 +148,26 @@ class _AnimeEpisodeState extends State<AnimeEpisode> {
                                               onDismissed: (direction) {
                                                 DataBaseHelper.instance
                                                     .remove(anime.id)
-                                                    .then((value) {
-                                                  setState(() {
-                                                    snapshot.data
-                                                        ?.removeAt(index);
-                                                    ScaffoldMessenger.of(
-                                                            context)
-                                                        .showSnackBar(
-                                                      SnackBar(
-                                                          content: Text(
-                                                              "Successfully Removed ${anime.name}")),
+                                                    .then(
+                                                  (value) {
+                                                    setState(
+                                                      () {
+                                                        snapshot.data?.removeAt(
+                                                          index,
+                                                        );
+                                                        ScaffoldMessenger.of(
+                                                          context,
+                                                        ).showSnackBar(
+                                                          SnackBar(
+                                                            content: Text(
+                                                              "Successfully Removed ${anime.name}",
+                                                            ),
+                                                          ),
+                                                        );
+                                                      },
                                                     );
-                                                  });
-                                                });
-
-                                                ;
+                                                  },
+                                                );
                                               },
                                               child: Card(
                                                 color: Colors.grey[900]
