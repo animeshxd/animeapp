@@ -443,11 +443,12 @@ class AnimeFull {
 
   factory AnimeFull.fromJson(Map json) {
     return AnimeFull(
-        name: json['name'],
-        image: json['image'],
-        description: json['description'],
-        data: json['data'],
-        total: json['total'] ?? 0);
+      name: json['name'],
+      image: json['image'],
+      description: json['description'],
+      data: json['data'],
+      total: json['total'] ?? 0,
+    );
   }
 }
 
