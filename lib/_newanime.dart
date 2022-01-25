@@ -501,41 +501,46 @@ class _TextDropdownState extends State<TextDropdown> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onTap: () {
-          if (toSplit < text.length) {
-            setState(() {
+      behavior: HitTestBehavior.translucent,
+      onTap: () {
+        if (toSplit < text.length) {
+          setState(
+            () {
               flag = !flag;
-            });
-          }
-        },
-        child: Column(
-          children: [
-            SizedBox(
-              height: marg,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "Summary",
-                  textAlign: TextAlign.left,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyText1
-                      ?.copyWith(fontSize: 17, letterSpacing: 1),
-                ),
-                Icon(flag ? Icons.arrow_drop_down : Icons.arrow_drop_up)
-              ],
-            ),
-            SizedBox(
-              height: marg,
-            ),
-            Text(
-              flag ? first : text,
-              style: widget.style,
-            ),
-          ],
-        ));
+            },
+          );
+        }
+      },
+      child: Column(
+        children: [
+          SizedBox(
+            height: marg,
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Summary",
+                textAlign: TextAlign.left,
+                style: Theme.of(context).textTheme.bodyText1?.copyWith(
+                      fontSize: 17,
+                      letterSpacing: 1,
+                    ),
+              ),
+              Icon(
+                flag ? Icons.arrow_drop_down : Icons.arrow_drop_up,
+              )
+            ],
+          ),
+          SizedBox(
+            height: marg,
+          ),
+          Text(
+            flag ? first : text,
+            style: widget.style,
+          ),
+        ],
+      ),
+    );
   }
 }
