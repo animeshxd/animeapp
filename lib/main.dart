@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'loading.dart';
 import 'home.dart';
@@ -5,6 +7,7 @@ import '_newanime.dart';
 import 'output.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const App());
 }
 
@@ -15,20 +18,33 @@ class App extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      
+
       theme: ThemeData(
         primarySwatch: Colors.grey,
         primaryColor: Colors.grey,
         backgroundColor: Colors.black,
         scaffoldBackgroundColor: const Color(0x561F1C1C),
-        appBarTheme: const AppBarTheme(backgroundColor: Colors.black54),
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(backgroundColor: Colors.black, selectedItemColor: Colors.white),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.black54,
+        ),
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          backgroundColor: Colors.black,
+          selectedItemColor: Colors.white,
+        ),
         highlightColor: Colors.black54,
         canvasColor: Colors.grey[900],
         cardColor: const Color(0x561F1C1C),
         dividerColor: Colors.grey,
-        textSelectionTheme: const TextSelectionThemeData(cursorColor: Colors.grey, selectionColor: Colors.grey, selectionHandleColor: Colors.grey),
+        textSelectionTheme: const TextSelectionThemeData(
+          cursorColor: Colors.grey,
+          selectionColor: Colors.grey,
+          selectionHandleColor: Colors.grey,
+        ),
         brightness: Brightness.dark,
+        snackBarTheme: SnackBarThemeData(
+          backgroundColor: Colors.grey[900],
+          contentTextStyle: const TextStyle(color: Colors.white),
+        ),
       ),
       initialRoute: '/',
       routes: {

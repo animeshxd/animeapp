@@ -1,0 +1,4 @@
+{
+    "dart.previewBazelWorkspaceCustomScripts": true,
+    "dart.previewFlutterUiGuides": true
+}

@@ -34,6 +34,8 @@ dependencies:
     sdk: flutter
   http: ^0.13.4
   logger: ^1.1.0
+  path_provider: ^2.0.8
+  sqflite: ^2.0.2
   url_launcher: ^6.0.18
   wakelock: ^0.6.1
 

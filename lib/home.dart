@@ -24,8 +24,6 @@ class _HomeState extends State<Home> {
   final ScrollController _controller = ScrollController();
   final SinkStream _sinkStream = SinkStream();
 
-
-
   Future<void> _getanime() async {
     if (!_hasAnime) return;
     if (_usingService) return;
@@ -72,7 +70,10 @@ class _HomeState extends State<Home> {
 
       return;
     } on HttpException {
-      showsnack("Error: Unexpected Connection Error!", label: "Exit App", );
+      showsnack(
+        "Error: Unexpected Connection Error!",
+        label: "Exit App",
+      );
       return;
     } on FormatException {
       showsnack("Error: Unexpected ServerSide Error!");
@@ -164,68 +165,70 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: StreamBuilder(
-          stream: _sinkStream.stream,
-          builder: (context, snapshot) {
-            if (snapshot.hasData) {
-              return RefreshIndicator(
-                onRefresh: () async {
-                  _nextPage = 1;
-                  anime.clear();
-                  await _getanime();
-                  showsnack("Refresh Done");
+      body: StreamBuilder(
+        stream: _sinkStream.stream,
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            return RefreshIndicator(
+              onRefresh: () async {
+                _nextPage = 1;
+                anime.clear();
+                await _getanime();
+                showsnack("Refresh Done");
+              },
+              child: ListView.separated(
+                separatorBuilder: (context, index) {
+                  return const SizedBox();
                 },
-                child: ListView.separated(
-                  separatorBuilder: (context, index) {
-                    return const SizedBox();
-                  },
-                  // itemExtent: 10,
-                  itemCount: anime.length + 1,
-                  controller: _controller,
-                  itemBuilder: (context, index) {
-                    if (index == anime.length) {
-                      return const LinearProgressIndicator(
-                        color: Colors.grey,
-                      );
-                    }
-                    return ListTile(
-                      // leading: Image(image: CachedNetworkImageProvider(anime[index].image)),
-                      title: Text(anime[index].name),
-                      subtitle: Text(anime[index].date),
-                      onTap: () {
-                        Navigator.of(context)
-                            .pushNamed('/anime', arguments: anime[index].href);
-                      },
+                // itemExtent: 10,
+                itemCount: anime.length + 1,
+                controller: _controller,
+                itemBuilder: (context, index) {
+                  if (index == anime.length) {
+                    return const LinearProgressIndicator(
+                      color: Colors.grey,
                     );
-                  },
-                ),
-              );
-            } else {
-              return const Center(
-                child: CircularProgressIndicator(),
-              );
-            }
-          },
-        ),
-        bottomNavigationBar: BottomNavigationBar(
-            currentIndex: 0,
-            // type: BottomNav igationBarType.shifting,
-            // selectedIconTheme: IconThemeData(color: Colors.grey),
-            onTap: (value) {
-              switch (value) {
-                case 1:
-                  showSearch(context: context, delegate: SearchAnime());
-                  break;
-                default:
-              }
-            },
-            items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.search),
-                label: 'search',
-              )
-            ]));
+                  }
+                  return ListTile(
+                    // leading: Image(image: CachedNetworkImageProvider(anime[index].image)),
+                    title: Text(anime[index].name),
+                    subtitle: Text(anime[index].date),
+                    onTap: () {
+                      Navigator.of(context)
+                          .pushNamed('/anime', arguments: anime[index].href);
+                    },
+                  );
+                },
+              ),
+            );
+          } else {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+        },
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 0,
+        // type: BottomNav igationBarType.shifting,
+        // selectedIconTheme: IconThemeData(color: Colors.grey),
+        onTap: (value) {
+          switch (value) {
+            case 1:
+              showSearch(context: context, delegate: SearchAnime());
+              break;
+            default:
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            label: 'search',
+          )
+        ],
+      ),
+    );
   }
 }
 

@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'database/database.dart' show Anime, DataBaseHelper;
 import 'config.dart';
 import 'search.dart';
 
@@ -18,6 +19,7 @@ class _AnimeEpisodeState extends State<AnimeEpisode> {
   final ScrollController _scrollController = ScrollController();
   final _streamSinkList = SinkStreamList();
   final _streamSinkString = SinkStreamString();
+  final _likeunlike = SinkStreamAnime();
 
   @override
   void dispose() {
@@ -27,7 +29,7 @@ class _AnimeEpisodeState extends State<AnimeEpisode> {
     super.dispose();
   }
 
-  Future<AnimeFull> _getData() async {
+  Future<AnimeFull> _getData(BuildContext context) async {
     var data = ModalRoute.of(context)?.settings.arguments as String;
     Uri url = Uri.http(baseServer, data);
     bool valid = false;
@@ -68,11 +70,13 @@ class _AnimeEpisodeState extends State<AnimeEpisode> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: FutureBuilder<AnimeFull>(
-        future: _getData(),
+        future: _getData(context),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(
-              child: Text(snapshot.error.toString()),
+              child: Text(
+                snapshot.error.toString(),
+              ),
             );
           }
           if (snapshot.hasData) {
@@ -92,22 +96,155 @@ class _AnimeEpisodeState extends State<AnimeEpisode> {
                   // floating: true,
                   expandedHeight: MediaQuery.of(context).size.height * 0.39,
                   flexibleSpace: FlexibleSpaceBar(
-                      background: SingleChildScrollView(
-                    child: Image.network(
-                      anime.image,
-                      fit: BoxFit.cover,
+                    background: SingleChildScrollView(
+                      child: Image.network(
+                        anime.image,
+                        fit: BoxFit.cover,
+                      ),
                     ),
-                  )),
+                  ),
                   actions: [
-                    ///TODO: Add later
                     IconButton(
-                      onPressed: () {},
-                      icon: const Icon(Icons.playlist_add),
-                      tooltip: "Add to list",
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) {
+                              return Scaffold(
+                                appBar: AppBar(
+                                  title: const Text(""),
+                                ),
+                                body: FutureBuilder<List<Anime>>(
+                                  future: DataBaseHelper.instance.likedList(),
+                                  builder: (context, snapshot) {
+                                    if (!snapshot.hasData) {
+                                      return const Center(
+                                        child: CircularProgressIndicator(),
+                                      );
+                                    }
+                                    return StatefulBuilder(
+                                      builder: (context, setState) {
+                                        return ListView.builder(
+                                          itemCount: snapshot.data?.length,
+                                          itemBuilder: (context, index) {
+                                            var anime = snapshot.data![index];
+                                            return Dismissible(
+                                              key: UniqueKey(),
+                                              direction:
+                                                  DismissDirection.startToEnd,
+                                              background: Container(
+                                                alignment: Alignment.centerLeft,
+                                                color: Colors.red,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 10),
+                                                child: const Text(
+                                                  "Remove from List",
+                                                  style: TextStyle(
+                                                      color: Colors.white),
+                                                ),
+                                              ),
+                                              onDismissed: (direction) {
+                                                DataBaseHelper.instance
+                                                    .remove(anime.id)
+                                                    .then((value) {
+                                                  setState(() {
+                                                    snapshot.data
+                                                        ?.removeAt(index);
+                                                    ScaffoldMessenger.of(
+                                                            context)
+                                                        .showSnackBar(
+                                                      SnackBar(
+                                                          content: Text(
+                                                              "Successfully Removed ${anime.name}")),
+                                                    );
+                                                  });
+                                                });
+
+                                                ;
+                                              },
+                                              child: Card(
+                                                color: Colors.grey[900]
+                                                    ?.withOpacity(.5),
+                                                child: ListTile(
+                                                  title: Text(
+                                                    anime.name,
+                                                  ),
+                                                  // subtitle: Text(snapshot.data?[index]['date']),
+                                                  trailing: const Icon(
+                                                    Icons.download,
+                                                  ),
+                                                  onTap: () {
+                                                    Navigator.of(context)
+                                                        .pushNamed(
+                                                      '/anime',
+                                                      arguments: anime.id,
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        );
+                                      },
+                                    );
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                        ).then(
+                          (value) {
+                            _likeunlike.sink.add(false);
+                          },
+                        );
+                      },
+                      icon: const Icon(Icons.bookmark),
+                      tooltip: "search",
+                    ),
+                    StreamBuilder<bool>(
+                      stream: _likeunlike.stream,
+                      builder: (context, stream) {
+                        return FutureBuilder<bool>(
+                          future: DataBaseHelper.instance.isLiked(
+                            anime.data.first.first['href'],
+                          ),
+                          builder: (context, future) {
+                            return IconButton(
+                              onPressed: () async {
+                                future.data ?? false
+                                    ? await DataBaseHelper.instance.remove(
+                                        anime.data.first.first['href'],
+                                      )
+                                    : await DataBaseHelper.instance.add(
+                                        Anime(
+                                          id: anime.data.first.first['href'],
+                                          name: anime.name,
+                                        ),
+                                      );
+                                _likeunlike.sink.add(
+                                  await DataBaseHelper.instance.isLiked(
+                                    anime.data.first.first['href'],
+                                  ),
+                                );
+                              },
+                              icon: Icon(
+                                future.data ?? false
+                                    ? Icons.playlist_add_check
+                                    : Icons.playlist_add,
+                              ),
+                              tooltip: "Add to list",
+                            );
+                          },
+                        );
+                      },
                     ),
                     IconButton(
                       onPressed: () {
-                        showSearch(context: context, delegate: SearchAnime());
+                        showSearch(
+                          context: context,
+                          delegate: SearchAnime(),
+                        );
                       },
                       icon: const Icon(Icons.search),
                       tooltip: "search",
@@ -137,10 +274,11 @@ class _AnimeEpisodeState extends State<AnimeEpisode> {
                             TextDropdown(
                               text: anime.description,
                               toSplit: 80,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .caption
-                                  ?.copyWith(fontSize: 15, letterSpacing: .25),
+                              style:
+                                  Theme.of(context).textTheme.caption?.copyWith(
+                                        fontSize: 15,
+                                        letterSpacing: .25,
+                                      ),
                             ),
                             const SizedBox(
                               height: 10,
@@ -152,26 +290,28 @@ class _AnimeEpisodeState extends State<AnimeEpisode> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text("Total ${anime.total}",
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyText1
-                                        ?.copyWith(
-                                            fontSize: 17, letterSpacing: 1)),
+                                Text(
+                                  "Total ${anime.total}",
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyText1
+                                      ?.copyWith(
+                                          fontSize: 17, letterSpacing: 1),
+                                ),
                                 if (!isSingle)
                                   StreamBuilder<String>(
-                                      stream: _streamSinkString.stream,
-                                      builder: (context, snapshot) {
-                                        if (!snapshot.hasData) {
-                                          return Container();
-                                        }
+                                    stream: _streamSinkString.stream,
+                                    builder: (context, snapshot) {
+                                      if (!snapshot.hasData) {
+                                        return Container();
+                                      }
 
-                                        return DropdownButton<String>(
-                                          value: snapshot.data,
-                                          onChanged: (value) {},
-                                          items: anime.data
-                                              .map<DropdownMenuItem<String>>(
-                                                  (value) {
+                                      return DropdownButton<String>(
+                                        value: snapshot.data,
+                                        onChanged: (value) {},
+                                        items: anime.data
+                                            .map<DropdownMenuItem<String>>(
+                                          (value) {
                                             String key =
                                                 "${value.first['number']} - ${value.last['number']}";
                                             return DropdownMenuItem(
@@ -182,13 +322,14 @@ class _AnimeEpisodeState extends State<AnimeEpisode> {
                                               value: key,
                                               child: Text(key),
                                             );
-                                          }).toList(),
-                                          icon:
-                                              const Icon(Icons.arrow_drop_down),
-                                          iconSize: 30,
-                                          underline: const SizedBox(),
-                                        );
-                                      }),
+                                          },
+                                        ).toList(),
+                                        icon: const Icon(Icons.arrow_drop_down),
+                                        iconSize: 30,
+                                        underline: const SizedBox(),
+                                      );
+                                    },
+                                  ),
                               ],
                             ),
                             const Divider(
@@ -212,21 +353,25 @@ class _AnimeEpisodeState extends State<AnimeEpisode> {
                     builder: (context, snapshot) {
                       if (snapshot.hasData) {
                         return SliverList(
-                            delegate:
-                                SliverChildBuilderDelegate((context, index) {
-                          return Card(
-                              child: ListTile(
-                            title: Text(snapshot.data?[index]['name']),
-                            subtitle: Text(snapshot.data?[index]['date']),
-                            trailing: const Icon(Icons.download),
-                            onTap: () {
-                              Navigator.of(context).pushNamed(
-                                '/output',
-                                arguments: snapshot.data?[index]['href'],
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              return Card(
+                                child: ListTile(
+                                  title: Text(snapshot.data?[index]['name']),
+                                  subtitle: Text(snapshot.data?[index]['date']),
+                                  trailing: const Icon(Icons.download),
+                                  onTap: () {
+                                    Navigator.of(context).pushNamed(
+                                      '/output',
+                                      arguments: snapshot.data?[index]['href'],
+                                    );
+                                  },
+                                ),
                               );
                             },
-                          ));
-                        }, childCount: snapshot.data?.length));
+                            childCount: snapshot.data?.length,
+                          ),
+                        );
                       } else {
                         return const SliverToBoxAdapter(
                           child: LinearProgressIndicator(),
@@ -285,6 +430,15 @@ class SinkStreamString {
   final _streamcontrolller = StreamController<String>();
   StreamSink<String> get sink => _streamcontrolller.sink;
   Stream<String> get stream => _streamcontrolller.stream;
+  void dispose() {
+    _streamcontrolller.close();
+  }
+}
+
+class SinkStreamAnime {
+  final _streamcontrolller = StreamController<bool>.broadcast();
+  StreamSink<bool> get sink => _streamcontrolller.sink;
+  Stream<bool> get stream => _streamcontrolller.stream;
   void dispose() {
     _streamcontrolller.close();
   }
