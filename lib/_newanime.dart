@@ -1,12 +1,12 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'database/anime.dart' show Anime, DataBaseHelper;
-import 'config.dart';
+import 'model/anime_full.dart' show AnimeFull;
+import 'savedlist.dart';
 import 'search.dart';
+import 'services/get_anime_full.dart' show getFullAnimeData;
+import 'widgets/widget.dart';
 
 class AnimeEpisode extends StatefulWidget {
   const AnimeEpisode({Key? key}) : super(key: key);
@@ -29,40 +29,6 @@ class _AnimeEpisodeState extends State<AnimeEpisode> {
     super.dispose();
   }
 
-  Future<AnimeFull> _getData(BuildContext context) async {
-    var data = ModalRoute.of(context)?.settings.arguments as String;
-    Uri url = Uri.http(baseServer, data);
-    bool valid = false;
-
-    try {
-      http.Response res = await http.get(url);
-      var jsondata = json.decode(res.body);
-      logger.d("Received Status Code: ${res.statusCode}");
-
-      if (200 > res.statusCode && res.statusCode > 299) {
-        if (res.statusCode > 499) {
-          throw "Unexpected ServerSide Error!";
-        } else {
-          throw jsondata['error'].toString();
-        }
-      } else {
-        valid = jsondata['status'];
-        if (!valid) throw jsondata['error'].toString();
-        return AnimeFull.fromJson(jsondata);
-      }
-    } on SocketException {
-      throw "Error: No Internet Connections!";
-    } on HttpException {
-      throw "Error: Unexpected Connection Error!";
-    } on FormatException {
-      throw "Error: Unexpected ServerSide Error!";
-    } on http.ClientException catch (e) {
-      throw "ClientSideError: ${e.message}";
-    } on Exception catch (e) {
-      throw "Error: ${e.toString()}";
-    }
-  }
-
   // final items = ['One', 'Two', 'Three', 'Four'];
   // String selectedValue = 'Four';
 
@@ -70,7 +36,7 @@ class _AnimeEpisodeState extends State<AnimeEpisode> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: FutureBuilder<AnimeFull>(
-        future: _getData(context),
+        future: getFullAnimeData(context),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(
@@ -111,121 +77,7 @@ class _AnimeEpisodeState extends State<AnimeEpisode> {
                           context,
                           MaterialPageRoute(
                             builder: (context) {
-                              return Scaffold(
-                                appBar: AppBar(
-                                  title: const Text(""),
-                                ),
-                                body: FutureBuilder<List<Anime>>(
-                                  future: DataBaseHelper.instance.likedList(),
-                                  builder: (context, snapshot) {
-                                    if (!snapshot.hasData) {
-                                      return const Center(
-                                        child: CircularProgressIndicator(),
-                                      );
-                                    }
-                                    return StatefulBuilder(
-                                      builder: (context, setState) {
-                                        return ListView.builder(
-                                          itemCount: snapshot.data?.length,
-                                          itemBuilder: (context, index) {
-                                            var anime = snapshot.data![index];
-                                            return Dismissible(
-                                              key: UniqueKey(),
-                                              direction:
-                                                  DismissDirection.startToEnd,
-                                              background: Container(
-                                                alignment: Alignment.centerLeft,
-                                                color: Colors.red,
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 10),
-                                                child: const Text(
-                                                  "Remove from List",
-                                                  style: TextStyle(
-                                                      color: Colors.white),
-                                                ),
-                                              ),
-                                              onDismissed: (direction) {
-                                                DataBaseHelper.instance
-                                                    .remove(anime.id)
-                                                    .then(
-                                                  (value) {
-                                                    setState(
-                                                      () {
-                                                        snapshot.data?.removeAt(
-                                                          index,
-                                                        );
-                                                        ScaffoldMessenger.of(
-                                                          context,
-                                                        ).showSnackBar(
-                                                          SnackBar(
-                                                            content: Text(
-                                                              "Successfully Removed ${anime.name}",
-                                                            ),
-                                                            action:
-                                                                SnackBarAction(
-                                                              label: "UNDO",
-                                                              onPressed:
-                                                                  () async {
-                                                                DataBaseHelper
-                                                                    .instance
-                                                                    .add(
-                                                                  anime,
-                                                                )
-                                                                    .then(
-                                                                  (value) {
-                                                                    setState(
-                                                                      () {
-                                                                        snapshot
-                                                                            .data
-                                                                            ?.insert(
-                                                                          index,
-                                                                          anime,
-                                                                        );
-                                                                      },
-                                                                    );
-                                                                  },
-                                                                );
-                                                              },
-                                                            ),
-                                                            dismissDirection:
-                                                                DismissDirection
-                                                                    .horizontal,
-                                                          ),
-                                                        );
-                                                      },
-                                                    );
-                                                  },
-                                                );
-                                              },
-                                              child: Card(
-                                                color: Colors.grey[900]
-                                                    ?.withOpacity(.5),
-                                                child: ListTile(
-                                                  title: Text(
-                                                    anime.name,
-                                                  ),
-                                                  // subtitle: Text(snapshot.data?[index]['date']),
-                                                  trailing: const Icon(
-                                                    Icons.download,
-                                                  ),
-                                                  onTap: () {
-                                                    Navigator.of(context)
-                                                        .pushNamed(
-                                                      '/anime',
-                                                      arguments: anime.id,
-                                                    );
-                                                  },
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        );
-                                      },
-                                    );
-                                  },
-                                ),
-                              );
+                              return const SavedList();
                             },
                           ),
                         ).then(
@@ -427,30 +279,7 @@ class _AnimeEpisodeState extends State<AnimeEpisode> {
   }
 }
 
-class AnimeFull {
-  final String name;
-  final String image;
-  final String description;
-  final List data;
-  final int total;
 
-  AnimeFull(
-      {required this.total,
-      required this.name,
-      required this.image,
-      required this.description,
-      required this.data});
-
-  factory AnimeFull.fromJson(Map json) {
-    return AnimeFull(
-      name: json['name'],
-      image: json['image'],
-      description: json['description'],
-      data: json['data'],
-      total: json['total'] ?? 0,
-    );
-  }
-}
 
 class SinkStreamList {
   final _streamcontrolller = StreamController<List>();
@@ -477,71 +306,5 @@ class SinkStreamAnime {
   Stream<bool> get stream => _streamcontrolller.stream;
   void dispose() {
     _streamcontrolller.close();
-  }
-}
-
-class TextDropdown extends StatefulWidget {
-  final String text;
-  final int toSplit;
-  final TextStyle? style;
-  const TextDropdown(
-      {Key? key, required this.text, required this.toSplit, this.style})
-      : super(key: key);
-  @override
-  _TextDropdownState createState() => _TextDropdownState();
-}
-
-class _TextDropdownState extends State<TextDropdown> {
-  String get text => widget.text;
-  int get toSplit => widget.toSplit;
-  String get first =>
-      text.substring(0, toSplit < text.length ? toSplit : text.length) +
-      (toSplit < text.length ? ' ...' : ' .');
-  bool flag = true;
-  double marg = 10;
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onTap: () {
-        if (toSplit < text.length) {
-          setState(
-            () {
-              flag = !flag;
-            },
-          );
-        }
-      },
-      child: Column(
-        children: [
-          SizedBox(
-            height: marg,
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "Summary",
-                textAlign: TextAlign.left,
-                style: Theme.of(context).textTheme.bodyText1?.copyWith(
-                      fontSize: 17,
-                      letterSpacing: 1,
-                    ),
-              ),
-              Icon(
-                flag ? Icons.arrow_drop_down : Icons.arrow_drop_up,
-              )
-            ],
-          ),
-          SizedBox(
-            height: marg,
-          ),
-          Text(
-            flag ? first : text,
-            style: widget.style,
-          ),
-        ],
-      ),
-    );
   }
 }

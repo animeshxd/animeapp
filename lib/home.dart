@@ -4,7 +4,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'config.dart';
-import 'search.dart';
+import 'model/anime_min.dart' show Anime;
+import 'search.dart' show SearchAnime;
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
@@ -37,15 +38,29 @@ class _HomeState extends State<Home> {
 
       if (200 > res.statusCode && res.statusCode > 299) {
         if (res.statusCode > 499) {
-          showsnack("Unexpected ServerSide Error!",
-              label: 'Exit', func: () => exit(0));
+          showsnack(
+            context,
+            "Unexpected ServerSide Error!",
+            label: 'Exit',
+            func: () => exit(0),
+          );
         } else {
-          showsnack(jsondata['error'], label: 'Exit', func: () => exit(0));
+          showsnack(
+            context,
+            jsondata['error'],
+            label: 'Exit',
+            func: () => exit(0),
+          );
         }
       } else {
         bool valid = jsondata['status'];
         if (!valid) {
-          showsnack(jsondata['error'], label: 'Exit', func: () => exit(0));
+          showsnack(
+            context,
+            jsondata['error'],
+            label: 'Exit',
+            func: () => exit(0),
+          );
           return;
         }
         // logger.d("Old length: ${anime.length}");
@@ -65,22 +80,27 @@ class _HomeState extends State<Home> {
       _usingService = false;
       _errorLock = false;
     } on SocketException {
-      showsnack("Error: No Internet Connections!",
-          label: "Exit", func: () => exit(0));
+      showsnack(
+        context,
+        "Error: No Internet Connections!",
+        label: "Exit",
+        func: () => exit(0),
+      );
 
       return;
     } on HttpException {
       showsnack(
+        context,
         "Error: Unexpected Connection Error!",
         label: "Exit App",
       );
       return;
     } on FormatException {
-      showsnack("Error: Unexpected ServerSide Error!");
+      showsnack(context, "Error: Unexpected ServerSide Error!");
       return;
     } catch (e) {
       logger.e(e);
-      showsnack("Error: $e");
+      showsnack(context, "Error: $e");
       return;
     }
 
@@ -122,7 +142,8 @@ class _HomeState extends State<Home> {
     });*/
   }
 
-  void showsnack(Object message, {String? label, Function()? func}) {
+  void showsnack(BuildContext context, Object message,
+      {String? label, Function()? func}) {
     _usingService = false;
     if (_errorLock) return;
     _errorLock = true;
@@ -165,6 +186,15 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        actions: [
+          IconButton(
+              onPressed: () {
+                showSearch(context: context, delegate: SearchAnime());
+              },
+              icon: const Icon(Icons.search))
+        ],
+      ),
       body: StreamBuilder(
         stream: _sinkStream.stream,
         builder: (context, snapshot) {
@@ -174,7 +204,7 @@ class _HomeState extends State<Home> {
                 _nextPage = 1;
                 anime.clear();
                 await _getanime();
-                showsnack("Refresh Done");
+                showsnack(context, "Refresh Done");
               },
               child: ListView.separated(
                 separatorBuilder: (context, index) {
@@ -208,37 +238,11 @@ class _HomeState extends State<Home> {
           }
         },
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0,
-        // type: BottomNav igationBarType.shifting,
-        // selectedIconTheme: IconThemeData(color: Colors.grey),
-        onTap: (value) {
-          switch (value) {
-            case 1:
-              showSearch(context: context, delegate: SearchAnime());
-              break;
-            default:
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: 'search',
-          )
-        ],
-      ),
     );
   }
 }
 
-class Anime {
-  final String name;
-  final String href;
-  final String date;
-  final String image;
-  Anime(this.name, this.href, this.date, this.image);
-}
+
 
 class SinkStream {
   final _streamcontrolller = StreamController<bool>();

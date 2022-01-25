@@ -1,9 +1,10 @@
 
 import 'package:flutter/material.dart';
-import 'loading.dart';
-import 'home.dart';
-import '_newanime.dart';
-import 'output.dart';
+import 'loading.dart' show Loading;
+import 'home.dart' show Home;
+import '_newanime.dart' show AnimeEpisode;
+import 'output.dart' show OutputAnime;
+import 'savedlist.dart' show SavedList ;
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,13 +45,15 @@ class App extends StatelessWidget {
           backgroundColor: Colors.grey[900],
           contentTextStyle: const TextStyle(color: Colors.white),
         ),
+        iconTheme: const IconThemeData(color: Colors.white)
       ),
       initialRoute: '/',
       routes: {
         '/': (context) => const Loading(),
         '/home': (context) => const Home(),
         '/anime': (context) => const AnimeEpisode(),
-        '/output': (context) => const OutputAnime()
+        '/output': (context) => const OutputAnime(),
+        '/saved': (context) => const SavedList(),
       },
       // home: OutputAnime(),
     );
