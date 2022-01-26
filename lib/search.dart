@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'config.dart';
 import 'package:http/http.dart' as http;
+import 'database/anime.dart' show DataBaseHelper, Anime;
 
 class SearchAnime extends SearchDelegate<String> {
   bool _usingservice = false;
@@ -12,7 +13,12 @@ class SearchAnime extends SearchDelegate<String> {
   @override
   List<Widget>? buildActions(BuildContext context) {
     // TODO: implement buildActions
-    return [];
+    return [
+      IconButton(
+        onPressed: () => query = '',
+        icon: const Icon(Icons.clear),
+      )
+    ];
   }
 
   @override
@@ -43,8 +49,38 @@ class SearchAnime extends SearchDelegate<String> {
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    // TODO: implement buildSuggestions
-    return Container();
+    return FutureBuilder<List<Anime>>(
+      future: DataBaseHelper.instance.likedList(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return Container();
+        }
+        return Container();
+        /*
+        return ListView.builder(
+          itemCount: snapshot.data?.length,
+          itemBuilder: (context, index) {
+            Anime anime = snapshot.data![index];
+            return Card(
+              color: Colors.grey[900]?.withOpacity(.5),
+              child: ListTile(
+                title: Text(anime.name),
+                subtitle: Text(anime.time.toString()),
+                // trailing: const Icon(Icons.download),
+                onTap: () {
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    '/anime',
+                    ModalRoute.withName('/home'),
+                    arguments: anime.id,
+                  );
+                },
+              ),
+            );
+          },
+        );
+        */
+      },
+    );
   }
 
   Future<Widget> getFutureResult(String search) async {

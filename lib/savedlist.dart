@@ -39,11 +39,17 @@ class _SavedListState extends State<SavedList> {
           if (!future.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
+          if (future.data!.isEmpty) {
+            return const Center(child: Text("Empty List"));
+          }
 
           return StreamBuilder<bool>(
             stream: _streamController.stream,
             initialData: true,
             builder: (context, stream) {
+              if (future.data!.isEmpty) {
+                return const Center(child: Text("Empty List"));
+              }
               return ListView.builder(
                 itemCount: future.data?.length,
                 itemBuilder: (context, index) {
@@ -109,4 +115,3 @@ class _SavedListState extends State<SavedList> {
     );
   }
 }
-
