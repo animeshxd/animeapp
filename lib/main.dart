@@ -23,9 +23,7 @@ class App extends StatelessWidget {
         primaryColor: Colors.grey,
         backgroundColor: Colors.black,
         scaffoldBackgroundColor: const Color(0x561F1C1C),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.black54,
-        ),
+        appBarTheme: const AppBarTheme(backgroundColor: Colors.black54),
         bottomNavigationBarTheme: const BottomNavigationBarThemeData(
           backgroundColor: Colors.black,
           selectedItemColor: Colors.white,
@@ -45,9 +43,7 @@ class App extends StatelessWidget {
           contentTextStyle: const TextStyle(color: Colors.white),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
-        buttonTheme: const ButtonThemeData(
-          disabledColor: Colors.white,
-        ),
+        buttonTheme: const ButtonThemeData(disabledColor: Colors.white),
       ),
       initialRoute: '/',
       routes: {

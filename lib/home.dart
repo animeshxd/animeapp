@@ -34,10 +34,11 @@ class _HomeState extends State<Home> {
             icon: const Icon(Icons.search),
           ),
           IconButton(
-            onPressed: () {
-              Navigator.of(context).pushNamed('/saved');
+            onPressed: () async {
+              await Navigator.of(context).pushNamed('/saved');
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
             },
-            icon: const Icon(Icons.list_sharp),
+            icon: const Icon(Icons.bookmark),
           ),
           PopupMenuButton(
             icon: const Icon(Icons.more_vert),

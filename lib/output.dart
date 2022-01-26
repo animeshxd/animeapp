@@ -25,7 +25,6 @@ class _OutputAnimeState extends State<OutputAnime> {
   String _currentRef = '';
   final sinkStream = SinkStream();
   final _broadcast = SinkStreamBroadCast();
-  bool _watched = false;
   String? id;
 
   @override
@@ -33,19 +32,7 @@ class _OutputAnimeState extends State<OutputAnime> {
     FijkLog.setLevel(FijkLogLevel.Error);
     super.initState();
     Wakelock.enable();
-    // _getdemo('');
-    //
     _player.addListener(onValueUpdate);
-    // _player.onCurrentPosUpdate.listen(
-    //   (event) async {
-    //     if (_watched) return;
-    //     if (id == null) {
-    //       return;
-    //     }
-    //     var duration = await DataBaseOutputHelper.instance.getDuration(id!);
-
-    //   },
-    // );
   }
 
   void onValueUpdate() async {
@@ -69,9 +56,10 @@ class _OutputAnimeState extends State<OutputAnime> {
         }
         await DataBaseOutputHelper.instance.add(
           AnimeOutput(
-              id: id!,
-              duration: _player.currentPos.inSeconds,
-              total: _player.value.duration.inSeconds),
+            id: id!,
+            duration: _player.currentPos.inSeconds,
+            total: _player.value.duration.inSeconds,
+          ),
         );
         break;
 
@@ -82,9 +70,10 @@ class _OutputAnimeState extends State<OutputAnime> {
         }
         await DataBaseOutputHelper.instance.add(
           AnimeOutput(
-              id: id!,
-              duration: _player.currentPos.inSeconds,
-              total: _player.value.duration.inSeconds),
+            id: id!,
+            duration: _player.currentPos.inSeconds,
+            total: _player.value.duration.inSeconds,
+          ),
         );
         break;
     }
@@ -268,14 +257,15 @@ class _OutputAnimeState extends State<OutputAnime> {
     id ??= ModalRoute.of(context)?.settings.arguments as String;
     return WillPopScope(
       onWillPop: () async {
-        print("pop");
+        // print("pop");
         if (_player.currentPos >=
             await DataBaseOutputHelper.instance.getDuration(id!)) {
           await DataBaseOutputHelper.instance.add(
             AnimeOutput(
-                id: id!,
-                duration: _player.currentPos.inSeconds,
-                total: _player.value.duration.inSeconds),
+              id: id!,
+              duration: _player.currentPos.inSeconds,
+              total: _player.value.duration.inSeconds,
+            ),
           );
         }
         Navigator.of(context).pop();
@@ -290,9 +280,10 @@ class _OutputAnimeState extends State<OutputAnime> {
                   await DataBaseOutputHelper.instance.getDuration(id!)) {
                 await DataBaseOutputHelper.instance.add(
                   AnimeOutput(
-                      id: id!,
-                      duration: _player.currentPos.inSeconds,
-                      total: _player.value.duration.inSeconds),
+                    id: id!,
+                    duration: _player.currentPos.inSeconds,
+                    total: _player.value.duration.inSeconds,
+                  ),
                 );
               }
               Navigator.of(context).pop();
@@ -301,29 +292,29 @@ class _OutputAnimeState extends State<OutputAnime> {
           ),
           actions: [
             StreamBuilder<bool>(
-                stream: _broadcast.reloaderStream,
-                builder: (context, stream) {
-                  if (!stream.hasData) {
-                    return Container();
-                  }
-                  return FutureBuilder<Duration>(
-                    future: DataBaseOutputHelper.instance.getDuration(id!),
-                    initialData: const Duration(),
-                    builder: (context, snapshot) {
-                      Duration? duration = snapshot.data;
-                      return TextButton(
-                        onPressed: () {
-                          _watched = true;
-                          _player.seekTo(duration!.inMilliseconds);
-                        },
-                        child: Text(
-                          // "${duration?.inHours}:${duration?.inMinutes.remainder(60)}:${(duration?.inSeconds.remainder(60))}",
-                          duration.toString().split('.').first,
-                        ),
-                      );
-                    },
-                  );
-                }),
+              stream: _broadcast.reloaderStream,
+              builder: (context, stream) {
+                if (!stream.hasData) {
+                  return Container();
+                }
+                return FutureBuilder<Duration>(
+                  future: DataBaseOutputHelper.instance.getDuration(id!),
+                  initialData: const Duration(),
+                  builder: (context, snapshot) {
+                    Duration? duration = snapshot.data;
+                    return TextButton(
+                      onPressed: () async {
+                        await _player.seekTo(duration!.inMilliseconds);
+                      },
+                      child: Text(
+                        // "${duration?.inHours}:${duration?.inMinutes.remainder(60)}:${(duration?.inSeconds.remainder(60))}",
+                        duration.toString().split('.').first,
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
             // previous
             StreamBuilder<Map>(
               stream: _broadcast.stream,
@@ -393,8 +384,8 @@ class _OutputAnimeState extends State<OutputAnime> {
                     return IconButton(
                       onPressed: () async {
                         if (snapshot.hasData) {
-                          if (await canLaunch(
-                              snapshot.data!['download'] as String)) {
+                          bool can = await canLaunch(snapshot.data!['download'] as String);
+                          if (can) {
                             await launch(snapshot.data!['download'] as String);
                           }
                         }

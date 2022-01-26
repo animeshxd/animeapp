@@ -20,7 +20,8 @@ class DataBaseHelper {
         await db.execute('''
           CREATE TABLE anime(
             id TEXT PRIMARY KEY,
-            name TEXT
+            name TEXT,
+            time DATETIME
           );
         ''');
       },
@@ -33,6 +34,7 @@ class DataBaseHelper {
     // print(query);
     return query.isEmpty ? false : true;
   }
+
   Future<bool> remove(String id) async {
     var db = await instance.database;
     var query = await db.delete('anime', where: "id = ?", whereArgs: [id]);
@@ -52,7 +54,6 @@ class DataBaseHelper {
     var db = await instance.database;
     await db.insert('anime', anime.toMap(),
         conflictAlgorithm: sql.ConflictAlgorithm.ignore);
-    
   }
 }
 
@@ -61,13 +62,15 @@ class Anime {
   final String id;
   // ignore: non_constant_identifier_names
   final String name;
+  DateTime? time;
+  Anime({required this.id, required this.name, DateTime? time}) {
+    this.time = time?? DateTime.now();
+  }
 
-  Anime({required this.id, required this.name});
-
-  factory Anime.fromMap(Map<String, dynamic> map) {
-    return Anime(id: map['id']!, name: map['name']!);
+  factory Anime.fromMap(Map<String, dynamic> map,) {
+    return Anime(id: map['id']!, name: map['name']!, time: DateTime.parse(map['time']));
   }
   Map<String, dynamic> toMap() {
-    return {"id": id, "name": name};
+    return {"id": id, "name": name, "time": time.toString()};
   }
 }
