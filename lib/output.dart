@@ -9,6 +9,7 @@ import 'package:wakelock/wakelock.dart';
 import 'config.dart';
 import 'custompanel.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'database/output.dart' show AnimeOutput, DataBaseOutputHelper;
 
 class OutputAnime extends StatefulWidget {
   const OutputAnime({Key? key}) : super(key: key);
@@ -24,6 +25,8 @@ class _OutputAnimeState extends State<OutputAnime> {
   String _currentRef = '';
   final sinkStream = SinkStream();
   final _broadcast = SinkStreamBroadCast();
+  bool _watched = false;
+  String? id;
 
   @override
   void initState() {
@@ -32,10 +35,62 @@ class _OutputAnimeState extends State<OutputAnime> {
     Wakelock.enable();
     // _getdemo('');
     //
+    _player.addListener(onValueUpdate);
+    // _player.onCurrentPosUpdate.listen(
+    //   (event) async {
+    //     if (_watched) return;
+    //     if (id == null) {
+    //       return;
+    //     }
+    //     var duration = await DataBaseOutputHelper.instance.getDuration(id!);
+
+    //   },
+    // );
+  }
+
+  void onValueUpdate() async {
+    id ??= ModalRoute.of(context)?.settings.arguments as String;
+    var duration = await DataBaseOutputHelper.instance.getDuration(id!);
+    // _broadcast.reloaderSink.add(true);
+
+    switch (_player.value.state) {
+      case FijkState.idle:
+        return;
+      case FijkState.initialized:
+        return;
+      case FijkState.asyncPreparing:
+        return;
+      case FijkState.prepared:
+        _broadcast.reloaderSink.add(true);
+        break;
+      case FijkState.error:
+        if (duration >= _player.currentPos) {
+          return;
+        }
+        await DataBaseOutputHelper.instance.add(
+          AnimeOutput(
+              id: id!,
+              duration: _player.currentPos.inSeconds,
+              total: _player.value.duration.inSeconds),
+        );
+        break;
+
+      default:
+        _broadcast.reloaderSink.add(true);
+        if (duration >= _player.currentPos) {
+          return;
+        }
+        await DataBaseOutputHelper.instance.add(
+          AnimeOutput(
+              id: id!,
+              duration: _player.currentPos.inSeconds,
+              total: _player.value.duration.inSeconds),
+        );
+        break;
+    }
   }
 
   Future<void> initVideo(String url, String referer) async {
-    
     if (_player.value.state != FijkState.end) {
       await _player.reset();
     }
@@ -48,25 +103,28 @@ class _OutputAnimeState extends State<OutputAnime> {
     await _player.setDataSource(url, autoPlay: true).catchError((error) {});
   }
 
-  Future<Widget> getSources(String data) async {
+  Future<Widget> getSources(String id) async {
     try {
-      Uri url = Uri.http(baseServer, '/stream' + data);
+      Uri url = Uri.http(baseServer, '/stream' + id);
       http.Response res = await http.get(url);
       // print(res.body);
       if ((200 >= res.statusCode && 299 <= res.statusCode)) {
         return Center(
-            child:
-                Text("ServerSide Unexpected Error: Status ${res.statusCode}"));
+          child: Text("ServerSide Unexpected Error: Status ${res.statusCode}"),
+        );
       }
       Map _data = json.decode(res.body);
       if (!_data['status']) {
         return Center(
-            child: Text(
-                "ServerSide Unexpected Error: Status ${res.statusCode} ${_data['error']}"));
+          child: Text(
+              "ServerSide Unexpected Error: Status ${res.statusCode} ${_data['error']}"),
+        );
       }
       _anime = _data['data'];
       if (_anime.isEmpty) {
-        return const Center(child: Text("Error: Can't Find Playable Sources"));
+        return const Center(
+          child: Text("Error: Can't Find Playable Sources"),
+        );
       }
       for (var i in _anime) {
         if (i['quality'] == 'HIGH') {
@@ -91,18 +149,23 @@ class _OutputAnimeState extends State<OutputAnime> {
         // fs: false,
         panelBuilder: (player, data, context, viewSize, texturePos) {
           return CustomFijkPanel(
-              title: _data['name'].toString(),
-              player: player,
-              buildContext: context,
-              viewSize: viewSize,
-              texturePos: texturePos);
+            id: id,
+            title: _data['name'].toString(),
+            player: player,
+            buildContext: context,
+            viewSize: viewSize,
+            texturePos: texturePos,
+          );
         },
       );
     } on SocketException {
-      return const Center(child: Text("No Internet Connections"));
+      return const Center(
+        child: Text("No Internet Connections"),
+      );
     } catch (e) {
       return Center(
-          child: Text("ServerSide Unexpected Error: ${e.toString()}"));
+        child: Text("ServerSide Unexpected Error: ${e.toString()}"),
+      );
     }
   }
 
@@ -197,37 +260,94 @@ class _OutputAnimeState extends State<OutputAnime> {
     super.dispose();
     _player.release();
     Wakelock.disable();
+    _player.removeListener(onValueUpdate);
   }
 
   @override
   Widget build(BuildContext context) {
-    String _todata = ModalRoute.of(context)?.settings.arguments as String;
-    return Scaffold(
+    id ??= ModalRoute.of(context)?.settings.arguments as String;
+    return WillPopScope(
+      onWillPop: () async {
+        print("pop");
+        if (_player.currentPos >=
+            await DataBaseOutputHelper.instance.getDuration(id!)) {
+          await DataBaseOutputHelper.instance.add(
+            AnimeOutput(
+                id: id!,
+                duration: _player.currentPos.inSeconds,
+                total: _player.value.duration.inSeconds),
+          );
+        }
+        Navigator.of(context).pop();
+        return true;
+      },
+      child: Scaffold(
         appBar: AppBar(
           // title: Text(_todata[1]),
+          leading: IconButton(
+            onPressed: () async {
+              if (_player.currentPos >=
+                  await DataBaseOutputHelper.instance.getDuration(id!)) {
+                await DataBaseOutputHelper.instance.add(
+                  AnimeOutput(
+                      id: id!,
+                      duration: _player.currentPos.inSeconds,
+                      total: _player.value.duration.inSeconds),
+                );
+              }
+              Navigator.of(context).pop();
+            },
+            icon: const Icon(Icons.arrow_back_ios_new),
+          ),
           actions: [
+            StreamBuilder<bool>(
+                stream: _broadcast.reloaderStream,
+                builder: (context, stream) {
+                  if (!stream.hasData) {
+                    return Container();
+                  }
+                  return FutureBuilder<Duration>(
+                    future: DataBaseOutputHelper.instance.getDuration(id!),
+                    initialData: const Duration(),
+                    builder: (context, snapshot) {
+                      Duration? duration = snapshot.data;
+                      return TextButton(
+                        onPressed: () {
+                          _watched = true;
+                          _player.seekTo(duration!.inMilliseconds);
+                        },
+                        child: Text(
+                          // "${duration?.inHours}:${duration?.inMinutes.remainder(60)}:${(duration?.inSeconds.remainder(60))}",
+                          duration.toString().split('.').first,
+                        ),
+                      );
+                    },
+                  );
+                }),
             // previous
             StreamBuilder<Map>(
-                stream: _broadcast.stream,
-                builder: (context, snapshot) {
-                  if (snapshot.hasData) {
-                    if (snapshot.data!['previous'] != null) {
-                      return IconButton(
-                          tooltip: "Previous Episode",
-                          onPressed: () {
-                            Navigator.of(context).popAndPushNamed(
-                              '/output',
-                              arguments: snapshot.data!['previous'],
-                            );
-                          },
-                          icon: const Icon(Icons.navigate_before));
-                    } else {
-                      return Container();
-                    }
+              stream: _broadcast.stream,
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  if (snapshot.data!['previous'] != null) {
+                    return IconButton(
+                      tooltip: "Previous Episode",
+                      onPressed: () {
+                        Navigator.of(context).popAndPushNamed(
+                          '/output',
+                          arguments: snapshot.data!['previous'],
+                        );
+                      },
+                      icon: const Icon(Icons.navigate_before),
+                    );
                   } else {
                     return Container();
                   }
-                }),
+                } else {
+                  return Container();
+                }
+              },
+            ),
             // next
             StreamBuilder<Map>(
                 stream: _broadcast.stream,
@@ -235,14 +355,15 @@ class _OutputAnimeState extends State<OutputAnime> {
                   if (snapshot.hasData) {
                     if (snapshot.data!['next'] != null) {
                       return IconButton(
-                          tooltip: "Next Episode",
-                          onPressed: () {
-                            Navigator.of(context).popAndPushNamed(
-                              '/output',
-                              arguments: snapshot.data!['next'],
-                            );
-                          },
-                          icon: const Icon(Icons.navigate_next));
+                        tooltip: "Next Episode",
+                        onPressed: () {
+                          Navigator.of(context).popAndPushNamed(
+                            '/output',
+                            arguments: snapshot.data!['next'],
+                          );
+                        },
+                        icon: const Icon(Icons.navigate_next),
+                      );
                     } else {
                       return Container();
                     }
@@ -251,16 +372,17 @@ class _OutputAnimeState extends State<OutputAnime> {
                   }
                 }),
             IconButton(
-                onPressed: () {
-                  if (_player.value.fullScreen) {
-                    _player.exitFullScreen();
-                  } else {
-                    _player.enterFullScreen();
-                  }
-                },
-                icon: !_player.value.fullScreen
-                    ? const Icon(Icons.fullscreen)
-                    : const Icon(Icons.fullscreen_exit)),
+              onPressed: () {
+                if (_player.value.fullScreen) {
+                  _player.exitFullScreen();
+                } else {
+                  _player.enterFullScreen();
+                }
+              },
+              icon: !_player.value.fullScreen
+                  ? const Icon(Icons.fullscreen)
+                  : const Icon(Icons.fullscreen_exit),
+            ),
 
             //download
             StreamBuilder<Map>(
@@ -269,16 +391,16 @@ class _OutputAnimeState extends State<OutputAnime> {
                 if (snapshot.hasData) {
                   if (snapshot.data!['download'] != null) {
                     return IconButton(
-                        onPressed: () async {
-                          if (snapshot.hasData) {
-                            if (await canLaunch(
-                                snapshot.data!['download'] as String)) {
-                              await launch(
-                                  snapshot.data!['download'] as String);
-                            }
+                      onPressed: () async {
+                        if (snapshot.hasData) {
+                          if (await canLaunch(
+                              snapshot.data!['download'] as String)) {
+                            await launch(snapshot.data!['download'] as String);
                           }
-                        },
-                        icon: const Icon(Icons.download));
+                        }
+                      },
+                      icon: const Icon(Icons.download),
+                    );
                   } else {
                     return Container();
                   }
@@ -297,7 +419,7 @@ class _OutputAnimeState extends State<OutputAnime> {
           ],
         ),
         body: FutureBuilder(
-          future: getSources(_todata),
+          future: getSources(id!),
           builder: (context, snapshot) {
             if (snapshot.hasData) {
               return snapshot.data as Widget;
@@ -305,7 +427,9 @@ class _OutputAnimeState extends State<OutputAnime> {
               return const Center(child: CircularProgressIndicator());
             }
           },
-        ));
+        ),
+      ),
+    );
   }
 
   PopupMenuItem fixQuality(data) {
@@ -340,4 +464,8 @@ class SinkStreamBroadCast {
   final _streamcontrolller = StreamController<Map>.broadcast();
   StreamSink<Map> get sink => _streamcontrolller.sink;
   Stream<Map> get stream => _streamcontrolller.stream;
+
+  final _reloader = StreamController<bool>.broadcast();
+  StreamSink<bool> get reloaderSink => _reloader.sink;
+  Stream<bool> get reloaderStream => _reloader.stream;
 }

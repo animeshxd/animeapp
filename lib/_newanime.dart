@@ -7,6 +7,7 @@ import 'savedlist.dart';
 import 'search.dart';
 import 'services/get_anime_full.dart' show getFullAnimeData;
 import 'widgets/widget.dart';
+import 'database/output.dart' show AnimeOutput, DataBaseOutputHelper;
 
 class AnimeEpisode extends StatefulWidget {
   const AnimeEpisode({Key? key}) : super(key: key);
@@ -194,6 +195,7 @@ class _AnimeEpisodeState extends State<AnimeEpisode> {
                                       }
 
                                       return DropdownButton<String>(
+                                        borderRadius: BorderRadius.circular(5),
                                         value: snapshot.data,
                                         onChanged: (value) {},
                                         items: anime.data
@@ -243,16 +245,51 @@ class _AnimeEpisodeState extends State<AnimeEpisode> {
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
                               return Card(
-                                child: ListTile(
-                                  title: Text(snapshot.data?[index]['name']),
-                                  subtitle: Text(snapshot.data?[index]['date']),
-                                  trailing: const Icon(Icons.download),
-                                  onTap: () {
-                                    Navigator.of(context).pushNamed(
-                                      '/output',
-                                      arguments: snapshot.data?[index]['href'],
-                                    );
-                                  },
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    ListTile(
+                                      title:
+                                          Text(snapshot.data?[index]['name']),
+                                      subtitle:
+                                          Text(snapshot.data?[index]['date']),
+                                      trailing: const Icon(Icons.download),
+                                      onTap: () {
+                                        Navigator.of(context).pushNamed(
+                                          '/output',
+                                          arguments: snapshot.data?[index]
+                                              ['href'],
+                                        ).then((value)  {
+                                          _streamSinkList.sink.add(snapshot.data!);
+                                        });
+                                      },
+                                    ),
+                                    FutureBuilder<double>(
+                                        future: DataBaseOutputHelper.instance
+                                            .getPercentage(
+                                                snapshot.data?[index]['href']),
+                                        initialData: 0,
+                                        builder: (context, future) {
+                                          if (!future.hasData) {
+                                            return Container();
+                                          }
+                                          if (future.data! <= 0) {
+                                            return Container();
+                                          }
+                                          // print(snapshot.data);
+                                          return Container(
+                                            color: Colors.red,
+                                            height: 2,
+                                            width: MediaQuery.of(context)
+                                                    .size
+                                                    .width *
+                                                future.data!,
+                                          );
+                                        },),
+                                    const SizedBox(
+                                      height: 5,
+                                    )
+                                  ],
                                 ),
                               );
                             },
@@ -278,8 +315,6 @@ class _AnimeEpisodeState extends State<AnimeEpisode> {
     );
   }
 }
-
-
 
 class SinkStreamList {
   final _streamcontrolller = StreamController<List>();

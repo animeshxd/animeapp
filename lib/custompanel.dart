@@ -4,12 +4,14 @@ import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
 import 'package:fijkplayer/fijkplayer.dart';
 import 'package:flutter/material.dart';
 
+
 class CustomFijkPanel extends StatefulWidget {
   final FijkPlayer player;
   final BuildContext buildContext;
   final Size viewSize;
   final Rect texturePos;
   final String title;
+  final String id;
 
   const CustomFijkPanel({
     Key? key,
@@ -18,6 +20,7 @@ class CustomFijkPanel extends StatefulWidget {
     required this.viewSize,
     required this.texturePos,
     required this.title,
+    required this.id,
   }) : super(key: key);
 
   @override
@@ -31,6 +34,7 @@ class _CustomFijkPanelState extends State<CustomFijkPanel> {
 
   @override
   void initState() {
+    
     super.initState();
     player.addListener(_playerValueChanged);
   }
@@ -48,13 +52,16 @@ class _CustomFijkPanelState extends State<CustomFijkPanel> {
 
   @override
   Widget build(BuildContext context) {
+    print("build called");
     return StreamBuilder<FijkValue>(
       stream: _fijkStream.streamValue,
       builder: (context, snapshot) {
+
+
         FijkValue value = player.value;
         if (value.state == FijkState.error) {
           String? error = "Error";
-          if (value.exception.code == 2004) {
+          if (value.exception.code == -2004) {
             error = "No Internet Connections!";
           } else {
             error = value.exception.message;
@@ -87,6 +94,7 @@ class _CustomFijkPanelState extends State<CustomFijkPanel> {
             } else {
               await player.pause();
             }
+            
           },
           onPanUpdate: (details) async {
             // Swiping in right direction.
@@ -132,37 +140,23 @@ class _CustomFijkPanelState extends State<CustomFijkPanel> {
                             .seekTo(player.currentPos.inMilliseconds - 10000);
                       }
                     },
-                    child: Container(
-                      width: MediaQuery.of(context).size.width / 3.1,
-                      color: Colors.transparent,
-                      height: MediaQuery.of(context).size.height * 0.50,
-                    ),
+                    child: xController(context),
                   ),
                   GestureDetector(
-                    onDoubleTap: () async {
-                      if (player.value.state == FijkState.paused) {
-                        await player.start();
-                      } else {
-                        await player.pause();
-                      }
-                    },
-                    child: Container(
-                      width: MediaQuery.of(context).size.width / 3.1,
-                      color: Colors.transparent,
-                      height: MediaQuery.of(context).size.height * 0.60,
-                    ),
-                  ),
+                      onDoubleTap: () async {
+                        if (player.value.state == FijkState.paused) {
+                          await player.start();
+                        } else {
+                          await player.pause();
+                        }
+                      },
+                      child: xController(context)),
                   GestureDetector(
-                    onDoubleTap: () async {
-                      await player
-                          .seekTo(player.currentPos.inMilliseconds + 10000);
-                    },
-                    child: Container(
-                      width: MediaQuery.of(context).size.width / 3.1,
-                      color: Colors.transparent,
-                      height: MediaQuery.of(context).size.height * 0.50,
-                    ),
-                  ),
+                      onDoubleTap: () async {
+                        await player
+                            .seekTo(player.currentPos.inMilliseconds + 10000);
+                      },
+                      child: xController(context)),
                 ],
               ),
               StreamBuilder<bool>(
@@ -178,11 +172,12 @@ class _CustomFijkPanelState extends State<CustomFijkPanel> {
                         children: [
                           Expanded(
                             // width: 250,
-                            child: StreamBuilder(
+                            child: StreamBuilder<Duration>(
                               stream: player.onCurrentPosUpdate,
                               // initialData: const Duration(seconds: 0),
                               builder: (context, snapshot) {
                                 if (snapshot.hasData) {
+                                  // print(snapshot.data);
                                   return ProgressBar(
                                     // thumbGlowColor: Colors.amber,
                                     thumbRadius: 6,
@@ -244,6 +239,14 @@ class _CustomFijkPanelState extends State<CustomFijkPanel> {
         max(0.0, widget.texturePos.top),
         min(widget.viewSize.width, widget.texturePos.right),
         min(widget.viewSize.height, widget.texturePos.bottom));*/
+  }
+
+  Container xController(BuildContext context) {
+    return Container(
+      width: MediaQuery.of(context).size.width / 3.1,
+      color: Colors.transparent,
+      height: MediaQuery.of(context).size.height * 0.50,
+    );
   }
 }
 
