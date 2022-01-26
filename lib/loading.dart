@@ -12,7 +12,7 @@ class Loading extends StatefulWidget {
 }
 
 class _LoadingState extends State<Loading> {
-  Widget _child = const Text("Loading...");
+  Widget _child = const CircularProgressIndicator(color: Colors.green,);
 
   void prehome() async {
     Uri url = Uri.http(baseServer, '/');
