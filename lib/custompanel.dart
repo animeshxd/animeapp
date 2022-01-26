@@ -52,7 +52,7 @@ class _CustomFijkPanelState extends State<CustomFijkPanel> {
 
   @override
   Widget build(BuildContext context) {
-    print("build called");
+    // print("build called");
     return StreamBuilder<FijkValue>(
       stream: _fijkStream.streamValue,
       builder: (context, snapshot) {
