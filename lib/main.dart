@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'loading.dart' show Loading;
 import 'home.dart' show Home;
-import '_newanime.dart' show AnimeEpisode;
+import 'anime.dart' show AnimeEpisode;
 import 'output.dart' show OutputAnime;
 import 'savedlist.dart' show SavedList;
 

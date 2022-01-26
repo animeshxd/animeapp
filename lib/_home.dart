@@ -32,9 +32,7 @@ class _HomeState extends State<Home> {
       if (maxscroll == currentPixel) {
         // current_page += 1;
         logger.d("adding...");
-        setState(() {
-          
-        });
+        setState(() {});
         // _getMore().then((value) {
         //   setState(() {});
         // });
@@ -57,19 +55,14 @@ class _HomeState extends State<Home> {
           },
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.subtitles), label: 'Home'),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.search),
-              label: 'search',
-            )
-          ]),
+            BottomNavigationBarItem(icon: Icon(Icons.search), label: 'search')
+          ],),
       body: FutureBuilder(
         future: _initHome(),
         builder: (context, snapshot) {
           if (snapshot.hasData) return snapshot.data as Widget;
           return const Center(
-            child: CircularProgressIndicator(
-              color: Colors.grey,
-            ),
+            child: CircularProgressIndicator(color: Colors.grey),
           );
         },
       ),
@@ -86,7 +79,6 @@ class _HomeState extends State<Home> {
       if (res.statusCode >= 200 && res.statusCode < 299) {
         bool status = json['status'];
         if (!status) {
-          
           return Center(
             child: Text("Error!: " + json['error'].toString()),
           );
@@ -115,9 +107,7 @@ class _HomeState extends State<Home> {
                   );
                 },
                 separatorBuilder: (context, index) {
-                  return const SizedBox(
-                    height: 2,
-                  );
+                  return const SizedBox(height: 2);
                 },
                 itemCount: _list.length + 1),
           );

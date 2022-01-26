@@ -1,9 +1,12 @@
-import 'dart:convert';
-import 'dart:io';
+import 'dart:async';
 
-import 'config.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'model/anime_full.dart' show AnimeFull;
+import 'search.dart';
+import 'services/get_anime_full.dart' show getFullAnimeData;
+import 'widgets/widget.dart';
+import 'database/anime.dart' show Anime, DataBaseHelper;
+import 'database/output.dart' show DataBaseOutputHelper;
 
 class AnimeEpisode extends StatefulWidget {
   const AnimeEpisode({Key? key}) : super(key: key);
@@ -13,318 +16,284 @@ class AnimeEpisode extends StatefulWidget {
 }
 
 class _AnimeEpisodeState extends State<AnimeEpisode> {
-  bool errorlock = false;
-  final ScrollController _controller = ScrollController();
-  @override
-  void initState() {
-    super.initState();
-  }
+  final ScrollController _scrollController = ScrollController();
+  final _streamSinkList = SinkStreamList();
+  final _streamSinkString = SinkStreamString();
+  final _likeunlike = SinkStreamAnime();
 
   @override
   void dispose() {
+    _scrollController.dispose();
+    _streamSinkList.dispose();
+    _streamSinkString.dispose();
     super.dispose();
   }
 
+  // final items = ['One', 'Two', 'Three', 'Four'];
+  // String selectedValue = 'Four';
+
   @override
   Widget build(BuildContext context) {
-    String data = ModalRoute.of(context)?.settings.arguments as String;
     return Scaffold(
-      body: FutureBuilder(
-        future: _getData(data, _controller),
+      body: FutureBuilder<AnimeFull>(
+        future: getFullAnimeData(context),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(
-              child: Text(snapshot.error.toString()),
+            return Center(child: Text(snapshot.error.toString()));
+          }
+          if (!snapshot.hasData) {
+            return const LinearProgressIndicator();
+          }
+          AnimeFull anime = snapshot.data!;
+          bool isSingle = anime.data.length <= 1;
+          if (anime.data.isNotEmpty) {
+            _streamSinkList.sink.add(anime.data.first);
+            _streamSinkString.sink.add(
+              "${anime.data.first.first['number']} - ${anime.data.first.last['number']}",
             );
           }
-          if (snapshot.hasData) {
-            return snapshot.data as Widget;
-          } else {
-            return const SafeArea(
-              child: LinearProgressIndicator(
-                color: Colors.grey,
-                // backgroundColor: Colors.grey,
+
+          return CustomScrollView(
+            controller: _scrollController,
+            slivers: [
+              SliverAppBar(
+                pinned: !false,
+                // floating: true,
+                expandedHeight: MediaQuery.of(context).size.height * 0.39,
+                flexibleSpace: FlexibleSpaceBar(
+                  background: SingleChildScrollView(
+                    child: Image.network(anime.image, fit: BoxFit.cover),
+                  ),
+                ),
+                actions: [
+                  IconButton(
+                    onPressed: () async {
+                      await Navigator.pushNamed(context, '/saved');
+                      _likeunlike.sink.add(false);
+                    },
+                    icon: const Icon(Icons.bookmark),
+                    tooltip: "search",
+                  ),
+                  StreamBuilder<bool>(
+                    stream: _likeunlike.stream,
+                    builder: (context, stream) {
+                      return FutureBuilder<bool>(
+                        future: DataBaseHelper.instance.isLiked(
+                          anime.data.first.first['href'],
+                        ),
+                        builder: (context, future) {
+                          return IconButton(
+                            onPressed: () async {
+                              future.data ?? false
+                                  ? await DataBaseHelper.instance
+                                      .remove(anime.data.first.first['href'])
+                                  : await DataBaseHelper.instance.add(Anime(
+                                      id: anime.data.first.first['href'],
+                                      name: anime.name));
+                              _likeunlike.sink.add(
+                                await DataBaseHelper.instance
+                                    .isLiked(anime.data.first.first['href']),
+                              );
+                            },
+                            icon: Icon(future.data ?? false
+                                ? Icons.playlist_add_check
+                                : Icons.playlist_add),
+                            tooltip: "Add to list",
+                          );
+                        },
+                      );
+                    },
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      showSearch(
+                        context: context,
+                        delegate: SearchAnime(),
+                      );
+                    },
+                    icon: const Icon(Icons.search),
+                    tooltip: "search",
+                  )
+                ],
               ),
-            );
-          }
+              SliverSafeArea(
+                sliver: SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 13),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          anime.name,
+                          style: Theme.of(context).textTheme.headline6,
+                        ),
+                        const SizedBox(height: 10),
+                        const Divider(height: 10, thickness: 1.3),
+                        TextDropdown(
+                          text: anime.description,
+                          toSplit: 80,
+                          style: Theme.of(context)
+                              .textTheme
+                              .caption
+                              ?.copyWith(fontSize: 15, letterSpacing: .25),
+                        ),
+                        const SizedBox(height: 10),
+                        const Divider(height: 10, thickness: 1.3),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "Total ${anime.total}",
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyText1
+                                  ?.copyWith(
+                                    fontSize: 17,
+                                    letterSpacing: 1,
+                                  ),
+                            ),
+                            //
+                            if (!isSingle)
+                              StreamBuilder<String>(
+                                stream: _streamSinkString.stream,
+                                builder: (context, snapshot) {
+                                  if (!snapshot.hasData) {
+                                    return const SizedBox(
+                                      height: 30,
+                                    );
+                                  }
+
+                                  return DropdownButton<String>(
+                                    borderRadius: BorderRadius.circular(5),
+                                    value: snapshot.data,
+                                    onChanged: (value) {},
+                                    items: dropDownEpisodes(anime),
+                                    icon: const Icon(Icons.arrow_drop_down),
+                                    iconSize: 30,
+                                    underline: const SizedBox(),
+                                  );
+                                },
+                              ),
+                          ],
+                        ),
+                        const Divider(height: 10, thickness: 1.3),
+                        const SizedBox(height: 1)
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                sliver: StreamBuilder<List>(
+                  stream: _streamSinkList.stream,
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const SliverToBoxAdapter(
+                          child: LinearProgressIndicator());
+                    }
+
+                    return SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          return Card(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ListTile(
+                                  title: Text(snapshot.data?[index]['name']),
+                                  subtitle: Text(snapshot.data?[index]['date']),
+                                  trailing: const Icon(Icons.download),
+                                  onTap: () async {
+                                    await Navigator.of(context).pushNamed(
+                                      '/output',
+                                      arguments: snapshot.data?[index]['href'],
+                                    );
+                                    _streamSinkList.sink.add(snapshot.data!);
+                                  },
+                                ),
+                                FutureBuilder<double>(
+                                  future: DataBaseOutputHelper.instance
+                                      .getPercentage(
+                                          snapshot.data?[index]['href']),
+                                  initialData: 0,
+                                  builder: (context, future) {
+                                    if (!future.hasData) {
+                                      return Container();
+                                    }
+                                    if (future.data! <= 0) {
+                                      return Container();
+                                    }
+                                    var width =
+                                        MediaQuery.of(context).size.width *
+                                            future.data!;
+                                    return Container(
+                                      color: Colors.red,
+                                      height: 2,
+                                      width: width,
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 5)
+                              ],
+                            ),
+                          );
+                        },
+                        childCount: snapshot.data?.length,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SliverFillRemaining()
+            ],
+          );
         },
       ),
-      // floatingActionButton: FloatingActionButton(
-      //   backgroundColor: Colors.grey,
-      //   onPressed: () {
-      //     Navigator.of(context).pop();
-      //   },
-      //   child: const Icon(Icons.arrow_back),
-      //   tooltip: "Go Back",
-      // ),
     );
   }
 
-  Future<Widget> _getData(String data, ScrollController _controller) async {
-    Uri url = Uri.http(baseServer, data);
-    bool valid = false;
-    AnimeFull anime;
-    try {
-      http.Response res = await http.get(url);
-      var jsondata = jsonDecode(res.body);
-      logger.d("Received Status Code: ${res.statusCode}");
-
-      if (200 > res.statusCode && res.statusCode > 299) {
-        if (res.statusCode > 499) {
-          return const Center(
-            child: Text("Unexpected ServerSide Error!"),
-          );
-        } else {
-          return Center(
-            child: Text(jsondata['error']),
-          );
-        }
-      } else {
-        valid = jsondata['status'];
-        if (!valid) return Center(child: Text(jsondata['error'] as String));
-        anime = AnimeFull(
-          name: jsondata['name'],
-          image: jsondata['image'],
-          description: jsondata['description'],
-          data: jsondata['data'],
-          controller: _controller,
+  List<DropdownMenuItem<String>> dropDownEpisodes(AnimeFull anime) {
+    return anime.data.map<DropdownMenuItem<String>>(
+      (value) {
+        String key = "${value.first['number']} - ${value.last['number']}";
+        return DropdownMenuItem(
+          onTap: () {
+            _streamSinkList.sink.add(value);
+            _streamSinkString.sink.add(key);
+          },
+          value: key,
+          child: Text(key),
         );
-      }
-    } on SocketException {
-      return const Center(child: Text("Error: No Internet Connections!"));
-    } on HttpException {
-      return const Center(child: Text("Error: Unexpected Connection Error!"));
-    } on FormatException {
-      return const Center(child: Text("Error: Unexpected ServerSide Error!"));
-    } catch (e) {
-      return Center(child: Text("Error: ${e.toString()}"));
-    }
-
-    if (!valid) return const Center(child: Text("No Result Found"));
-    return anime;
+      },
+    ).toList();
   }
 }
 
-class AnimeFull extends StatefulWidget {
-  final String name;
-  final String image;
-  final String description;
-  final List data;
-  final ScrollController controller;
-  const AnimeFull(
-      {Key? key,
-      required this.name,
-      required this.image,
-      required this.description,
-      required this.data,
-      required this.controller})
-      : super(key: key);
+class SinkStreamList {
+  final _streamcontrolller = StreamController<List>();
+  StreamSink<List> get sink => _streamcontrolller.sink;
+  Stream<List> get stream => _streamcontrolller.stream;
 
-  @override
-  _AnimeFullState createState() =>
-      // ignore: no_logic_in_create_state
-      _AnimeFullState(name, image, description, data, controller);
+  void dispose() {
+    _streamcontrolller.close();
+  }
 }
 
-class _AnimeFullState extends State<AnimeFull> {
-  final String name;
-  final String image;
-  final String description;
-  final ScrollController controller;
-  List data;
-  int total = 0;
-  bool showDownloads = false;
-  bool showDescription = false;
-  final Map<String, List> _temp = {};
-
-  List<DropdownMenuItem<String>> items = [];
-  Widget? _sliver;
-  String? _dropdown;
-  _AnimeFullState(
-      this.name, this.image, this.description, this.data, this.controller)
-      : total = data.length;
-
-  String getValidEpisodeNumber(Object? raw) {
-    String _temp = raw.toString();
-    String no = _temp.split('-').last;
-    RegExp _numeric = RegExp(r'^-?[0-9]+$');
-    return _numeric.hasMatch(no) ? no : "~";
+class SinkStreamString {
+  final _streamcontrolller = StreamController<String>();
+  StreamSink<String> get sink => _streamcontrolller.sink;
+  Stream<String> get stream => _streamcontrolller.stream;
+  void dispose() {
+    _streamcontrolller.close();
   }
+}
 
-  @override
-  void initState() {
-    super.initState();
-    for (var i = 0; i < data.length; i += 25) {
-      List __temp =
-          data.sublist(i, i + 25 > data.length ? data.length : i + 25);
-
-      String _episodeNumber =
-          "${getValidEpisodeNumber(__temp.first['href'])} - ${getValidEpisodeNumber(__temp.last['href'])}";
-      _dropdown ??= _episodeNumber;
-      _temp[_episodeNumber] = __temp;
-
-      items.add(DropdownMenuItem(
-        // enabled: false,
-        value: _episodeNumber,
-        child: Text(_episodeNumber),
-      ));
-      // print(_dropdown);
-      // print(items);
-
-      // _temp.add();
-    }
-    data = [];
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomScrollView(controller: controller, slivers: [
-      SliverAppBar(
-        pinned: true,
-        expandedHeight: 252,
-        flexibleSpace: FlexibleSpaceBar(
-          background: SingleChildScrollView(
-              child: Image.network(
-            image,
-            errorBuilder: (context, error, stackTrace) {
-              return Container();
-            },
-            fit: BoxFit.cover,
-          )),
-        ),
-      ),
-      SliverSafeArea(
-          sliver: SliverPadding(
-        padding: const EdgeInsets.symmetric(horizontal: 13),
-        sliver: SliverList(
-            delegate: SliverChildListDelegate([
-          Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const SizedBox(
-              height: 3,
-            ),
-            Text(
-              name,
-              style: const TextStyle(
-                  // color: Colors.white,
-                  letterSpacing: 1.5,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(
-              height: 10,
-            ),
-            const Divider(
-              height: 1,
-              // color: Colors.grey,
-            ),
-            ListTile(
-              style: ListTileStyle.drawer,
-              leading: const Text(
-                "DESCRIPTION",
-                style: TextStyle(
-                    // color: Colors.grey,
-                    letterSpacing: 1,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold),
-              ),
-              trailing: showDescription
-                  ? const Icon(Icons.arrow_drop_up)
-                  : const Icon(Icons.arrow_drop_down),
-              onTap: () {
-                setState(() {
-                  showDescription = !showDescription;
-                  if (showDownloads) showDownloads = false;
-                });
-              },
-            ),
-            Visibility(
-              visible: showDescription,
-              child: Text(
-                description,
-                style: const TextStyle(
-                  // color: Colors.grey,
-                  letterSpacing: 1,
-                  fontSize: 15,
-                ),
-              ),
-            ),
-            const Divider(
-              height: 1,
-              // color: Colors.grey,
-            ),
-            ListTile(
-              title: Text(
-                "Total: $total",
-                style: const TextStyle(
-                  color: Colors.grey,
-                  fontSize: 14,
-                  letterSpacing: 1,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              trailing: DropdownButton<String>(
-                icon: const Icon(Icons.arrow_drop_down),
-                value: _dropdown,
-                items: items,
-                // elevation: 0,
-                onChanged: (value) {
-                  setState(() {
-                    _dropdown = value!;
-                    showDownloads = true;
-                    _sliver = SliverList(
-                      // gridDelegate:
-                      //     const SliverGridDelegateWithFixedCrossAxisCount(
-                      //   crossAxisSpacing: 4,
-                      //   mainAxisSpacing: 4,
-                      //   crossAxisCount: 8,
-                      // ),
-                      delegate: SliverChildBuilderDelegate((context, index) {
-                        String _no = _temp[value]![index]['name'];
-                        String _url = _temp[value]![index]['href'];
-                        return Card(
-                          child: ListTile(
-                            title: Text(
-                              _no, /*style: TextStyle(fontSize: 14.5),*/
-                            ),
-                            trailing: const Icon(Icons.download),
-                            onTap: () {
-                              Navigator.of(context).pushNamed('/output', arguments: [_url, _no]);
-                            },
-                          ),
-                        );
-                      },
-                          childCount: showDownloads ? _temp[value]?.length : 0,
-                          addAutomaticKeepAlives: false
-                          // controller: controller,
-                          ),
-                    );
-                  });
-                },
-              ),
-              onTap: () {
-                setState(() {
-                  if (showDescription) showDescription = false;
-                  showDownloads = !showDownloads;
-                });
-              },
-            ),
-            const Divider(
-              height: 0.1,
-              // color: Colors.grey,
-            ),
-            const SizedBox(
-              height: 10,
-            )
-          ])
-        ], addAutomaticKeepAlives: false)),
-      )),
-      SliverVisibility(
-        // visible: showDownloads,
-        sliver: SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 13),
-            sliver: _sliver),
-      ),
-      const SliverFillRemaining()
-    ]);
+class SinkStreamAnime {
+  final _streamcontrolller = StreamController<bool>.broadcast();
+  StreamSink<bool> get sink => _streamcontrolller.sink;
+  Stream<bool> get stream => _streamcontrolller.stream;
+  void dispose() {
+    _streamcontrolller.close();
   }
 }
